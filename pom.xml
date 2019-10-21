@@ -11,7 +11,7 @@
 	<repositories>
 		<repository>
 			<id>localrepository</id>
-			<url>file:///Users/shirsats/code/testWorkspace/repo/ChatConnectionManagerServiceModel</url>
+			<url>file://${project.basedir}/../repo/</url>
 		</repository>
 	</repositories>
 

@@ -1,17 +1,19 @@
 package com.chat.testclient;
 
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-@SpringBootApplication
-@EnableScheduling
 public class Driver {
+	
+	private static ExecutorService executorService = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) throws Exception {
-        User user = new User("testUserId1");
-        String url = user.requestConnectingUrl();
-        
-        new ConnectionListener(url, user).initialize();
-        System.out.println("Reached...");
+    	System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.SimpleLog");
+    	System.setProperty("org.apache.commons.logging.simplelog.showdatetime", "true");
+    	System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http.wire", "INFO");
+    	System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.http.wire", "ERROR");
+
+    	executorService.submit(new UserTask("testUserId1"));
+    	executorService.submit(new UserTask("testUserId2"));
     }
 }

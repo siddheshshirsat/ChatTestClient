@@ -13,19 +13,20 @@ import org.java_websocket.handshake.ServerHandshake;
 public abstract class StompClient implements StompClientProvider {
 
     private static final Draft DEFAULT_DRAFT = new Draft_17();
+    private static final String DEFAULT_USER_ID = "defaultUserId";
     private WebSocketClient webSocketClient;
     private boolean isWebSocketConnected = false;
 
-    protected StompClient(final String destination, final Frame frame, final Draft draft) {
-        this.connectWebSocket(destination, frame, draft);
+    protected StompClient(final String destination, final Frame frame, final Draft draft, String userId) {
+        this.connectWebSocket(destination, frame, draft, userId);
     }
 
-    protected StompClient(final String destination) {
-        this(destination, new Frame().setConnection(destination), DEFAULT_DRAFT);
+    protected StompClient(final String destination, String userId) {
+        this(destination, new Frame().setConnection(destination), DEFAULT_DRAFT, userId);
     }
 
     protected StompClient(final String destination, final Frame frame) {
-        this(destination, frame, DEFAULT_DRAFT);
+        this(destination, frame, DEFAULT_DRAFT, DEFAULT_USER_ID);
     }
 
     protected abstract void onStompError(final String errorMessage);
@@ -90,12 +91,12 @@ public abstract class StompClient implements StompClientProvider {
         }
     }
 
-    private void connectWebSocket(final String destination, final Frame frame, final Draft draft) {
+    private void connectWebSocket(final String destination, final Frame frame, final Draft draft, String userId) {
         URI destinationURI;
         try {
             destinationURI = new URI(destination);
             Map<String, String> headers = new HashMap<String, String>();
-            headers.put("userId", "testUser");
+            headers.put("userId", userId);
             this.webSocketClient = new WebSocketClient(destinationURI, draft, headers, 0) {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {

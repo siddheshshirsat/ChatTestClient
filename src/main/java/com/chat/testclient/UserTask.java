@@ -2,6 +2,8 @@ package com.chat.testclient;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.http.HttpResponse;
@@ -16,13 +18,12 @@ import com.chat.connectionmanager.model.Message;
 import com.chat.connectionmanager.model.RequestConnectionRequest;
 import com.chat.connectionmanager.model.RequestConnectionResponse;
 import com.chat.connectionmanager.model.SendMessageRequest;
+import com.chat.connectionmanager.model.SendMessageResponse;
 import com.chat.testclient.stomp.Frame;
 import com.chat.testclient.stomp.StompClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.Getter;
-
-public class UserTask implements Callable<Boolean> {
+public class UserTask implements Callable<Integer> {
 	private static final String CONNECTION_MANAGER_ENDPOINT = "http://localhost:9000";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final String CONNECTION_API = "/webSocketService";
@@ -30,17 +31,19 @@ public class UserTask implements Callable<Boolean> {
 	private static final String REQUEST_CONNECTION_ENDPOINT = "/requestConnection";
 	private static final String SEND_MESSAGE_API = "/sendMessage";
 
-	@Getter
 	private String userId;
-
+	private int numberOfMessages;
+	private int receivedMessageCount;
 	HttpClient httpClient;
 
-	public UserTask(String userId) {
+	public UserTask(String userId, int numberOfMessages) {
 		this.userId = userId;
+		this.numberOfMessages = numberOfMessages;
+		this. receivedMessageCount = 0;
 		httpClient = HttpClients.createDefault();
 	}
 
-	public Boolean call() throws Exception {
+	public Integer call() throws Exception {
 		RequestConnectionRequest connectionRequest = new RequestConnectionRequest();
 		connectionRequest.setUserId(userId);
 		HttpPost post = new HttpPost(CONNECTION_MANAGER_ENDPOINT + REQUEST_CONNECTION_ENDPOINT);
@@ -51,19 +54,24 @@ public class UserTask implements Callable<Boolean> {
 		HttpResponse response = httpClient.execute(post);
 		RequestConnectionResponse connectionResponse = OBJECT_MAPPER
 				.readValue(EntityUtils.toString(response.getEntity()), RequestConnectionResponse.class);
-		setupConnection(connectionResponse.getUrl());
-		
+		StompClient stompClient = setupConnection(connectionResponse.getUrl());
+
 		// random async. message sending
-		for(int i=0; i<2;i++) {
-			int waitTime = (int)(Math.random() * 5) + 1;
-			Thread.sleep(waitTime* 1000);
+		for (int i = 0; i < numberOfMessages; i++) {
+			int waitTime = (int) (Math.random() * 5) + 1;
+			Thread.sleep(waitTime * 1000);
 			sendMessage();
 		}
-		return true;
+		
+		Thread.sleep(10000);
+		stompClient.disconnect();
+
+		// -1 for an emoty message recevied on connection setup.
+		return receivedMessageCount -1;
 	}
 
-	private void setupConnection(String url) throws IOException, URISyntaxException {
-		new StompClient(url + CONNECTION_API) {
+	private StompClient setupConnection(String url) throws IOException, URISyntaxException {
+		return new StompClient(url + CONNECTION_API, userId) {
 			@Override
 			protected void onStompError(String errorMessage) {
 			}
@@ -81,20 +89,27 @@ public class UserTask implements Callable<Boolean> {
 			@Override
 			protected void onStompMessage(final Frame frame) {
 				System.out.println("Reached....message = " + frame.getBody());
+				receivedMessageCount++;
 			}
 		};
 	}
-	
+
 	private void sendMessage() throws IOException, URISyntaxException {
-		String recipientId = "testUserId1".equals(userId) ? "testUserId2" : "testUserId1";
+		System.out.println("Reached....sending message...");
+
+		List<String> possibleRecipients = new ArrayList<>(Driver.USERS);
+		possibleRecipients.remove(userId);
+		int randomIndex = (int)(Math.random() * possibleRecipients.size());
+		String recipientId = possibleRecipients.get(randomIndex);
 		Message message = new Message(userId, recipientId, "Random message", System.currentTimeMillis());
 		SendMessageRequest sendMessageRequest = new SendMessageRequest(message);
 		HttpPost post = new HttpPost(CONNECTION_MANAGER_ENDPOINT + SEND_MESSAGE_API);
 
-		post.setEntity(new StringEntity(OBJECT_MAPPER.writeValueAsString(sendMessageRequest), ContentType.APPLICATION_JSON));
+		post.setEntity(
+				new StringEntity(OBJECT_MAPPER.writeValueAsString(sendMessageRequest), ContentType.APPLICATION_JSON));
 
-		httpClient.execute(post);
-//		SendMessageResponse sendMessageResponse = OBJECT_MAPPER.readValue(EntityUtils.toString(response.getEntity()), SendMessageResponse.class);
-//		System.out.println("Message sent successfully for user = " + userId);
+		HttpResponse response = httpClient.execute(post);
+		SendMessageResponse sendMessageResponse = OBJECT_MAPPER.readValue(EntityUtils.toString(response.getEntity()), SendMessageResponse.class);
+		System.out.println("Message sent successfully " + sendMessageResponse.isDelivered());
 	}
 }

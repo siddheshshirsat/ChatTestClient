@@ -95,8 +95,6 @@ public class UserTask implements Callable<Integer> {
 	}
 
 	private void sendMessage() throws IOException, URISyntaxException {
-		System.out.println("Reached....sending message...");
-
 		List<String> possibleRecipients = new ArrayList<>(Driver.USERS);
 		possibleRecipients.remove(userId);
 		int randomIndex = (int)(Math.random() * possibleRecipients.size());
@@ -110,6 +108,6 @@ public class UserTask implements Callable<Integer> {
 
 		HttpResponse response = httpClient.execute(post);
 		SendMessageResponse sendMessageResponse = OBJECT_MAPPER.readValue(EntityUtils.toString(response.getEntity()), SendMessageResponse.class);
-		System.out.println("Message sent successfully " + sendMessageResponse.isDelivered());
+//		System.out.println("Message sent successfully " + sendMessageResponse.isDelivered());
 	}
 }

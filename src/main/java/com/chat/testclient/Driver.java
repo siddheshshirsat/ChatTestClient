@@ -17,15 +17,15 @@ public class Driver {
 
 	private static ExecutorService executorService = Executors.newFixedThreadPool(10);
 	public static final Set<String> USERS = new HashSet<>(Arrays.asList("testUser1",
-																		"testUser2"));
-//																		"testUser3",
-//																		"testUser4",
-//																		"testUser5"));
+																		"testUser2",
+																		"testUser3",
+																		"testUser4",
+																		"testUser5"));
 
 	public static void main(String[] args) throws Exception {
 		initLogging();
 
-		int numberOfMessages = 10;
+		int numberOfMessages = 100;
 
 		Set<Future<Integer>> userTaskFutures = USERS.stream()
 				.map(u -> executorService.submit(new UserTask(u, numberOfMessages))).collect(Collectors.toSet());

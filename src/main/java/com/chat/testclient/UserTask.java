@@ -71,30 +71,17 @@ public class UserTask implements Callable<Boolean> {
 		WebSocketContainer container = null;//
 		Session session = null;
 		try {
-			// Tyrus is plugged via ServiceLoader API. See notes above
 			container = ContainerProvider.getWebSocketContainer();
-			// WS1 is the context-root of my web.app
-			// ratesrv is the path given in the ServerEndPoint annotation on server
-			// implementation
 			System.out.println("Reached..." + url);
 			session = container.connectToServer(UserWebsocketClientEndpoint.class, URI.create(url + CONNECTION_API));
 	        session.getAsyncRemote().sendText("Connect:" + userId);
 		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-//			if (session != null) {
-//				try {
-//					session.close();
-//				} catch (Exception e) {
-//					e.printStackTrace();
-//				}
-//			}
 		}
 	}
 
 	@OnMessage
 	public void onMessage(String message) {
-		// the new USD rate arrives from the websocket server side.
 		System.out.println("Received msg: " + message);
 	}
 
@@ -107,7 +94,5 @@ public class UserTask implements Callable<Boolean> {
 		post.setEntity(new StringEntity(OBJECT_MAPPER.writeValueAsString(sendMessageRequest), ContentType.APPLICATION_JSON));
 
 		httpClient.execute(post);
-//		SendMessageResponse sendMessageResponse = OBJECT_MAPPER.readValue(EntityUtils.toString(response.getEntity()), SendMessageResponse.class);
-//		System.out.println("Message sent successfully for user = " + userId);
 	}
 }

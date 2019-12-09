@@ -56,7 +56,7 @@ public class UserTask implements Callable<Boolean> {
 		HttpResponse response = httpClient.execute(post);
 		RequestConnectionResponse connectionResponse = OBJECT_MAPPER
 				.readValue(EntityUtils.toString(response.getEntity()), RequestConnectionResponse.class);
-		setupConnection(connectionResponse.getUrl());
+		setupConnection(connectionResponse);
 		
 		// random async. message sending
 		for(int i=0; i<2;i++) {
@@ -67,13 +67,13 @@ public class UserTask implements Callable<Boolean> {
 		return true;
 	}
 
-	private void setupConnection(String url) throws IOException, URISyntaxException {
+	private void setupConnection(RequestConnectionResponse connectionResponse) throws IOException, URISyntaxException {
 		WebSocketContainer container = null;//
 		Session session = null;
 		try {
 			container = ContainerProvider.getWebSocketContainer();
-			System.out.println("Reached..." + url);
-			session = container.connectToServer(UserWebsocketClientEndpoint.class, URI.create(url + CONNECTION_API));
+			System.out.println("Reached..." + connectionResponse);
+			session = container.connectToServer(UserWebsocketClientEndpoint.class, URI.create(connectionResponse.getScheme() + "://" + connectionResponse.getEndpoint() + CONNECTION_API));
 	        session.getAsyncRemote().sendText("Connect:" + userId);
 		} catch (Exception e) {
 			e.printStackTrace();

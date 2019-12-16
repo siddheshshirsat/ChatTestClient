@@ -45,7 +45,9 @@ public class UserTask implements Callable<Integer> {
 	@Getter
 	private int totalNumberOfUsers;
 
-	HttpClient httpClient;
+	private HttpClient httpClient;
+
+	private int count;
 
 	public UserTask(String userId, int totalNumberOfUsers) {
 		this.userId = userId;
@@ -54,6 +56,7 @@ public class UserTask implements Callable<Integer> {
 	}
 
 	public Integer call() throws Exception {
+		System.out.println("RReached..." + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
 		RequestConnectionRequest connectionRequest = new RequestConnectionRequest();
 		connectionRequest.setUserId(userId);
 		HttpPost post = new HttpPost(CONNECTION_MANAGER_ENDPOINT + REQUEST_CONNECTION_ENDPOINT);
@@ -67,22 +70,21 @@ public class UserTask implements Callable<Integer> {
 		setupConnection(connectionResponse);
 
 		// random async. message sending
-		int count = 0;
 		for (int i = 0; i < MESSAGES_TO_SEND; i++) {
 			int waitTime = (int) (Math.random() * MAX_WAIT_TIME_MILLIS) + 1;
 			Thread.sleep(waitTime);
-			count += sendMessage();
+			sendMessage();
 		}
+		Thread.sleep(5000);
 		return count;
 	}
 
 	private void setupConnection(RequestConnectionResponse connectionResponse) throws IOException, URISyntaxException {
-		WebSocketContainer container = null;//
 		Session session = null;
 		try {
-			container = ContainerProvider.getWebSocketContainer();
+			WebSocketContainer container = ContainerProvider.getWebSocketContainer();
 			System.out.println("Reached..." + connectionResponse);
-			session = container.connectToServer(UserWebsocketClientEndpoint.class, URI.create(
+			session = container.connectToServer(this, URI.create(
 					connectionResponse.getScheme() + "://" + connectionResponse.getEndpoint() + CONNECTION_API));
 			session.getAsyncRemote().sendText("Connect:" + userId);
 		} catch (Exception e) {
@@ -91,8 +93,9 @@ public class UserTask implements Callable<Integer> {
 	}
 
 	@OnMessage
-	public void onMessage(String message) {
-		System.out.println("Received msg: " + message);
+	public synchronized void onMessage(String message) {
+		System.out.println("Received msg: " + message + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
+		count++;
 	}
 
 	private int sendMessage() throws IOException, URISyntaxException {

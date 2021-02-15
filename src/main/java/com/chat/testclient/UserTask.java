@@ -3,7 +3,9 @@ package com.chat.testclient;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ContainerProvider;
@@ -39,12 +41,13 @@ public class UserTask implements Callable<Integer> {
 	private UsersConfig usersConfig;
 	private HttpClient httpClient;
 
-	private int count;
+	private Queue<String> queue;
 
 	public UserTask(String userId, UsersConfig usersConfig) {
 		this.userId = userId;
 		this.usersConfig = usersConfig;
 		httpClient = HttpClients.createDefault();
+		this.queue = new LinkedBlockingQueue<>();
 	}
 
 	public Integer call() throws Exception {
@@ -67,8 +70,8 @@ public class UserTask implements Callable<Integer> {
 			Thread.sleep(waitTime);
 			sendMessage();
 		}
-		Thread.sleep(5000);
-		return count;
+//		Thread.sleep(5000);
+		return queue.size();
 	}
 
 	private void setupConnection(RequestConnectionResponse connectionResponse) throws IOException, URISyntaxException {
@@ -87,7 +90,7 @@ public class UserTask implements Callable<Integer> {
 	@OnMessage
 	public synchronized void onMessage(String message) {
 		System.out.println("Received msg: " + message + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
-		count++;
+		queue.add(message);
 	}
 
 	private int sendMessage() throws IOException, URISyntaxException {

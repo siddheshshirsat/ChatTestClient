@@ -18,11 +18,16 @@ import com.chat.testclient.config.UsersConfig;
 
 public class Driver {
 	private static final String CONFIGURATION_USERS_PROPERTIES = "configuration/users.properties";
-	private static ExecutorService executorService = Executors.newFixedThreadPool(2);
 
 	public static void main(String[] args) throws Exception {
 		initLogging();
-		UsersConfig usersConfig = parseUsersConfig();
+
+		Properties properties = new Properties();
+		properties.load(new FileInputStream(new File(CONFIGURATION_USERS_PROPERTIES)));
+		UsersConfig usersConfig = parseUsersConfig(properties);
+
+		ExecutorService executorService = Executors
+				.newFixedThreadPool(Integer.parseInt(properties.getProperty("threadPoolSize")));
 
 		List<Future<Integer>> resultFutures = new ArrayList<>();
 		for (int i = 0; i < usersConfig.getNumberOfUsers(); i++) {
@@ -43,9 +48,7 @@ public class Driver {
 		System.out.println("resultSum = " + results.stream().mapToInt(i -> i).sum());
 	}
 
-	private static UsersConfig parseUsersConfig() throws FileNotFoundException, IOException {
-		Properties properties = new Properties();
-		properties.load(new FileInputStream(new File(CONFIGURATION_USERS_PROPERTIES)));
+	private static UsersConfig parseUsersConfig(Properties properties) throws FileNotFoundException, IOException {
 		return UsersConfig.builder().numberOfUsers(Integer.parseInt(properties.getProperty("numberOfUsers")))
 				.messagesSentPerUser(Integer.parseInt(properties.getProperty("messagesSentPerUser")))
 				.maxWaitTimeBetweenMessagesMillis(

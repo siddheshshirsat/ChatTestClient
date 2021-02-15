@@ -24,39 +24,31 @@ import com.chat.connectionmanager.model.RequestConnectionRequest;
 import com.chat.connectionmanager.model.RequestConnectionResponse;
 import com.chat.connectionmanager.model.SendMessageRequest;
 import com.chat.connectionmanager.model.SendMessageResponse;
+import com.chat.testclient.config.UsersConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.Getter;
 
 @ClientEndpoint
 public class UserTask implements Callable<Integer> {
-	private static final int MESSAGES_TO_SEND = 10;
-	private static final long MAX_WAIT_TIME_MILLIS = 5000;
-
 	private static final String CONNECTION_MANAGER_ENDPOINT = "http://localhost:9000";
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 	private static final String CONNECTION_API = "/user";
 	private static final String REQUEST_CONNECTION_ENDPOINT = "/requestConnection";
 	private static final String SEND_MESSAGE_API = "/sendMessage";
 
-	@Getter
 	private String userId;
-
-	@Getter
-	private int totalNumberOfUsers;
-
+	private UsersConfig usersConfig;
 	private HttpClient httpClient;
 
 	private int count;
 
-	public UserTask(String userId, int totalNumberOfUsers) {
+	public UserTask(String userId, UsersConfig usersConfig) {
 		this.userId = userId;
-		this.totalNumberOfUsers = totalNumberOfUsers;
+		this.usersConfig = usersConfig;
 		httpClient = HttpClients.createDefault();
 	}
 
 	public Integer call() throws Exception {
-		System.out.println("RReached..." + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
+		System.out.println("Reached..." + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
 		RequestConnectionRequest connectionRequest = new RequestConnectionRequest();
 		connectionRequest.setUserId(userId);
 		HttpPost post = new HttpPost(CONNECTION_MANAGER_ENDPOINT + REQUEST_CONNECTION_ENDPOINT);
@@ -70,8 +62,8 @@ public class UserTask implements Callable<Integer> {
 		setupConnection(connectionResponse);
 
 		// random async. message sending
-		for (int i = 0; i < MESSAGES_TO_SEND; i++) {
-			int waitTime = (int) (Math.random() * MAX_WAIT_TIME_MILLIS) + 1;
+		for (int i = 0; i < usersConfig.getMessagesSentPerUser(); i++) {
+			int waitTime = (int) (Math.random() * usersConfig.getMaxWaitTimeBetweenMessagesMillis()) + 1;
 			Thread.sleep(waitTime);
 			sendMessage();
 		}
@@ -83,7 +75,7 @@ public class UserTask implements Callable<Integer> {
 		Session session = null;
 		try {
 			WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-			System.out.println("Reached..." + connectionResponse);
+			System.out.println("Reached..." + connectionResponse + ", user id = " + userId);
 			session = container.connectToServer(this, URI.create(
 					connectionResponse.getScheme() + "://" + connectionResponse.getEndpoint() + CONNECTION_API));
 			session.getAsyncRemote().sendText("Connect:" + userId);
@@ -99,7 +91,7 @@ public class UserTask implements Callable<Integer> {
 	}
 
 	private int sendMessage() throws IOException, URISyntaxException {
-		int recipientIndex = (int) (Math.random() * totalNumberOfUsers);
+		int recipientIndex = (int) (Math.random() * usersConfig.getNumberOfUsers());
 
 		String recipientId = "testUserId" + recipientIndex;
 		Message message = new Message(userId, recipientId, "Random message", System.currentTimeMillis());

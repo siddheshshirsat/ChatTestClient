@@ -10,7 +10,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.apache.log4j.PropertyConfigurator;
 
@@ -30,22 +29,25 @@ public class Driver {
 				.newFixedThreadPool(Integer.parseInt(properties.getProperty("threadPoolSize")));
 
 		List<Future<Integer>> resultFutures = new ArrayList<>();
+		List<UserTask> userTasks = new ArrayList<>();
 		for (int i = 0; i < usersConfig.getNumberOfUsers(); i++) {
-			resultFutures.add(executorService.submit(new UserTask("testUserId" + i, usersConfig)));
+			userTasks.add(new UserTask("testUserId" + i, usersConfig));
 		}
 
-		List<Integer> results = resultFutures.stream().map(f -> {
-			try {
-				return f.get();
-			} catch (Exception e) {
-				e.printStackTrace();
-				return 0;
+		for (UserTask userTask: userTasks) {
+			resultFutures.add(executorService.submit(userTask));
+		}
+
+		int sum = 0;
+		while(sum < usersConfig.getNumberOfUsers()* usersConfig.getMessagesSentPerUser()) {
+			sum = 0;
+			for (UserTask userTask: userTasks) {
+				sum += userTask.getQueue().size();
 			}
-		}).collect(Collectors.toList());
-
-		System.out.println("results = " + results);
-
-		System.out.println("resultSum = " + results.stream().mapToInt(i -> i).sum());
+			System.out.println("Reached...recieved message count = " + sum);
+			Thread.sleep(5000);
+		}
+		System.out.println("Reached...final total recieved message count = " + sum);
 	}
 
 	private static UsersConfig parseUsersConfig(Properties properties) throws FileNotFoundException, IOException {

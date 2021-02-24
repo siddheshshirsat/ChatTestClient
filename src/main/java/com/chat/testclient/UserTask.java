@@ -29,6 +29,8 @@ import com.chat.connectionmanager.model.SendMessageResponse;
 import com.chat.testclient.config.UsersConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
+
 @ClientEndpoint
 public class UserTask implements Callable<Integer> {
 	private static final String CONNECTION_MANAGER_ENDPOINT = "http://localhost:9000";
@@ -41,6 +43,7 @@ public class UserTask implements Callable<Integer> {
 	private UsersConfig usersConfig;
 	private HttpClient httpClient;
 
+	@Getter
 	private Queue<String> queue;
 
 	public UserTask(String userId, UsersConfig usersConfig) {
@@ -70,8 +73,7 @@ public class UserTask implements Callable<Integer> {
 			Thread.sleep(waitTime);
 			sendMessage();
 		}
-//		Thread.sleep(5000);
-		return queue.size();
+		return 0;
 	}
 
 	private void setupConnection(RequestConnectionResponse connectionResponse) throws IOException, URISyntaxException {
@@ -89,12 +91,15 @@ public class UserTask implements Callable<Integer> {
 
 	@OnMessage
 	public synchronized void onMessage(String message) {
-		System.out.println("Received msg: " + message + ", user id " + userId + ", current thread = " + Thread.currentThread().getId());
 		queue.add(message);
+//		System.out.println("Received: " + ", user id " + userId + ", queue = " + queue);
 	}
 
 	private int sendMessage() throws IOException, URISyntaxException {
-		int recipientIndex = (int) (Math.random() * usersConfig.getNumberOfUsers());
+		int recipientIndex = (int) (Math.random() * (usersConfig.getNumberOfUsers()-1));
+		if(recipientIndex >= Integer.parseInt(userId.substring("testUserId".length()))) {
+			recipientIndex++;
+		}
 
 		String recipientId = "testUserId" + recipientIndex;
 		Message message = new Message(userId, recipientId, "Random message", System.currentTimeMillis());

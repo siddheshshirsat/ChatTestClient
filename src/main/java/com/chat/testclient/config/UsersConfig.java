@@ -9,5 +9,4 @@ public class UsersConfig {
 	private int numberOfUsers;
 	private int messagesSentPerUser;
 	private long maxWaitTimeBetweenMessagesMillis;
-
 }
